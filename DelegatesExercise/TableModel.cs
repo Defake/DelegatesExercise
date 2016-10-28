@@ -43,7 +43,12 @@ namespace DelegatesExercise
 			_width = width;
 			_tableValues = new List<List<int>>();
 			for (int i = 0; i < height; i++)
-				_tableValues[i] = new List<int>(width);
+			{
+				_tableValues.Add(new List<int>(_width));
+
+				for (int j = 0; j < width; j++)
+					_tableValues[i].Add(0);
+			}
 
 			_valuePut = new List<Action<int, int, int>>();
 			_rowInserted = new List<Action<int>>();
@@ -62,7 +67,11 @@ namespace DelegatesExercise
 
 		public void InsertRow(int rowIndex)
 		{
-			_tableValues.Insert(rowIndex, new List<int>(_width));
+			_tableValues.Insert(rowIndex, new List<int>());
+			for (int i = 0; i < _width; i++)
+			{
+				_tableValues[rowIndex].Add(0);
+			}
 
 			if (_rowInserted == null) return;
 			foreach (var action in _rowInserted)
@@ -72,7 +81,7 @@ namespace DelegatesExercise
 		public void InsertColumn(int columnIndex)
 		{
 			foreach (var row in _tableValues)
-				row.Insert(columnIndex, default(int));
+				row.Insert(columnIndex, 0);
 
 			_width++;
 
