@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DelegatesExercise.Test 
@@ -22,6 +23,8 @@ namespace DelegatesExercise.Test
 			table.InsertRow(8);
 			table.Get(0, 0); // just to check if the logger logs Get-events
 
+			logger.EndLogging();
+
 			Assert.AreEqual(logger.log[0], "NewColumn:4");
 			Assert.AreEqual(logger.log[1], "NewValue:11(1;2)");
 			Assert.AreEqual(logger.log[2], "NewRow:8");
@@ -31,23 +34,33 @@ namespace DelegatesExercise.Test
 	internal class TableLoggerExample
 	{
 		public readonly List<string> log;
+		public List<IDisposable> observers;
 
 		public TableLoggerExample(TableModel table)
 		{
 			log = new List<string>();
-			table.AddPutValueObserver(LogPutValue);
-			table.AddColumnInsertedObserver(LogInsertedColumn);
-			table.AddRowInsertedObserver(LogInsertedRow);
+			observers = new List<IDisposable>
+			{
+				table.AddPutValueObserver(LogPutValue),
+				table.AddColumnInsertedObserver(LogInsertedColumn),
+				table.AddRowInsertedObserver(LogInsertedRow)
+			};
 		}
 
-		private void LogPutValue(int row, int column, int value) => 
-			log.Add($"NewValue:{value}({row};{column})");
+		private void LogPutValue(CellArgument cell) => 
+			log.Add($"NewValue:{cell.value}({cell.rowIndex};{cell.columnIndex})");
 
-		private void LogInsertedColumn(int columnIndex) => 
-			log.Add($"NewColumn:{columnIndex}");
+		private void LogInsertedColumn(ColumnArgument column) => 
+			log.Add($"NewColumn:{column.columnIndex}");
 
-		private void LogInsertedRow(int rowIndex) => 
-			log.Add($"NewRow:{rowIndex}");
+		private void LogInsertedRow(RowArgument row) => 
+			log.Add($"NewRow:{row.rowIndex}");
 
+		public void EndLogging()
+		{
+			if (observers != null && observers.Count > 0)
+				foreach (var observer in observers)
+					observer.Dispose();
+		}
 	}
 }

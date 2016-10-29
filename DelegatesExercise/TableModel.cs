@@ -27,16 +27,10 @@ namespace DelegatesExercise
 		private readonly List<List<int>> _tableValues;
 
 		// Event observers lists
-		private readonly List<Action<int, int, int>> _valuePut;
-		private readonly List<Action<int>> _rowInserted;
-		private readonly List<Action<int>> _columnInserted;
-		private readonly List<Action<int, int, int>> _askedValue;
-
-		// Add listeners to events
-		public void AddPutValueObserver(Action<int, int, int> f) => _valuePut.Add(f); 
-		public void AddRowInsertedObserver(Action<int> f) => _rowInserted.Add(f); 
-		public void AddColumnInsertedObserver(Action<int> f) => _columnInserted.Add(f); 
-		public void AddAskedValueObserver(Action<int, int, int> f) => _askedValue.Add(f); 
+		private readonly List<Action<CellArgument>> _valuePut;
+		private readonly List<Action<RowArgument>> _rowInserted;
+		private readonly List<Action<ColumnArgument>> _columnInserted;
+		private readonly List<Action<CellArgument>> _askedValue;
 
 		public TableModel(int width, int height)
 		{
@@ -50,10 +44,31 @@ namespace DelegatesExercise
 					_tableValues[i].Add(0);
 			}
 
-			_valuePut = new List<Action<int, int, int>>();
-			_rowInserted = new List<Action<int>>();
-			_columnInserted = new List<Action<int>>();
-			_askedValue = new List<Action<int, int, int>>();
+			_valuePut = new List<Action<CellArgument>>();
+			_rowInserted = new List<Action<RowArgument>>();
+			_columnInserted = new List<Action<ColumnArgument>>();
+			_askedValue = new List<Action<CellArgument>>();
+		}
+
+		// Add listeners to events
+		public IDisposable AddPutValueObserver(Action<CellArgument> f) {
+			_valuePut.Add(f);
+			return new TableEventDisposer<CellArgument>(_valuePut, f);
+		}
+
+		public IDisposable AddRowInsertedObserver(Action<RowArgument> f) {
+			_rowInserted.Add(f);
+			return new TableEventDisposer<RowArgument>(_rowInserted, f);
+		}
+
+		public IDisposable AddColumnInsertedObserver(Action<ColumnArgument> f) {
+			_columnInserted.Add(f);
+			return new TableEventDisposer<ColumnArgument>(_columnInserted, f);
+		}
+
+		public IDisposable AddAskedValueObserver(Action<CellArgument> f) {
+			_askedValue.Add(f);
+			return new TableEventDisposer<CellArgument>(_askedValue, f);
 		}
 
 		public void Put(int row, int column, int value)
@@ -62,7 +77,7 @@ namespace DelegatesExercise
 
 			if (_valuePut == null) return;
 			foreach (var action in _valuePut)
-				action(row, column, value);
+				action(new CellArgument(row, column, value));
 		}
 
 		public void InsertRow(int rowIndex)
@@ -75,7 +90,7 @@ namespace DelegatesExercise
 
 			if (_rowInserted == null) return;
 			foreach (var action in _rowInserted)
-				action(rowIndex);
+				action(new RowArgument(rowIndex));
 		}
 
 		public void InsertColumn(int columnIndex)
@@ -87,7 +102,7 @@ namespace DelegatesExercise
 
 			if (_columnInserted == null) return;
 			foreach (var action in _columnInserted)
-				action(columnIndex);
+				action(new ColumnArgument(columnIndex));
 		}
 
 		public int Get(int row, int column)
@@ -96,9 +111,24 @@ namespace DelegatesExercise
 
 			if (_askedValue != null)
 				foreach (var action in _askedValue)
-					action(row, column, value);
+					action(new CellArgument(row, column, value));
 
 			return value;
+		}
+
+		private class TableEventDisposer<TArgument> : IDisposable {
+
+			private readonly List<Action<TArgument>> _listenersList;
+			private readonly Action<TArgument> _listener;
+
+			public TableEventDisposer(List<Action<TArgument>> listenersList, Action<TArgument> listener) 
+			{
+				_listenersList = listenersList;
+				_listener = listener;
+			}
+
+			public void Dispose() => 
+				_listenersList?.Remove(_listener);
 		}
 
 	}
